@@ -15,6 +15,7 @@ curve visualized as a sine-like chart. Responsive, polished UI.
 - React Query (data/state management)
 - Zustand (global state)
 - date-fns (date calculations)
+- axios (HTTP client)
 - Open-Meteo API (free, no key required)
 - Nominatim (reverse geocoding, no key required)
 - Vercel (deployment)
@@ -27,17 +28,17 @@ curve visualized as a sine-like chart. Responsive, polished UI.
 npm create vite@latest . -- --template react-ts
 npm install
 npm install -D tailwindcss @tailwindcss/vite
-npm install recharts @tanstack/react-query zustand date-fns
+npm install recharts @tanstack/react-query zustand date-fns axios
 npm install -D vitest @testing-library/react @testing-library/jest-dom jsdom
 npm install -D eslint prettier eslint-config-prettier @typescript-eslint/eslint-plugin
 ```
 
 After scaffolding, configure:
-- `vite.config.ts` — add Tailwind plugin and Vitest settings
+- `vite.config.ts` — add Tailwind plugin, Vitest settings, and `define: { __BUILD_DATE__ }` for build stamping
 - `tsconfig.json` — ensure `strict: true`, `noUncheckedIndexedAccess: true`
 - `eslint.config.js` — use `@typescript-eslint/recommended` + `prettier`
 - `.prettierrc` — `{ "semi": false, "singleQuote": true, "printWidth": 100 }`
-- `tailwind.config.ts` — extend palette with sunrise/navy tokens
+- Tailwind v4 uses CSS-based configuration (`@import "tailwindcss"` in CSS) — no `tailwind.config.ts` file
 
 ---
 
@@ -51,7 +52,7 @@ npm run lint         # ESLint (zero warnings required)
 npm run typecheck    # tsc --noEmit
 npm run test         # Vitest (watch mode)
 npm run test:ci      # Vitest (single run, for CI)
-npm run coverage     # Vitest coverage report
+npm run test:coverage  # Vitest coverage report
 ```
 
 Run before every commit: `npm run lint && npm run typecheck && npm run test:ci`
@@ -71,7 +72,7 @@ src/
   hooks/
     useGeolocation.ts    # Browser geolocation hook
     useDaylightToday.ts  # React Query hook for today's data
-    useDaylightYear.ts   # React Query hook for 365-day batch data
+    useDaylightYear.ts   # React Query hook for 12-month data (6 months past + 6 months forecast)
   store/
     locationStore.ts     # Zustand: current coordinates + city name
     themeStore.ts        # Zustand: dark/light mode preference
@@ -98,15 +99,30 @@ GET https://api.open-meteo.com/v1/forecast
 ```
 Returns today + tomorrow; use index 0 for today, compare index -1 from yesterday's call (or fetch `past_days=1`).
 
-### Open-Meteo — full year (single batch call)
+### Open-Meteo — 12-month chart data (two requests in parallel)
+
+The archive API only serves historical data up to today — future dates return a 400 error.
+Future months are proxied from the previous year's archive (day length is stable year-to-year),
+with dates shifted forward by one year in the UI.
+
+**Request 1 — past 6 months (real data):**
 ```
 GET https://archive-api.open-meteo.com/v1/archive
   ?latitude={lat}&longitude={lon}
   &daily=sunrise,sunset
   &timezone=auto
-  &start_date={YYYY-01-01}&end_date={YYYY-12-31}
+  &start_date={today - 6 months}&end_date={today}
 ```
-Use the current year. Returns arrays of 365 sunrise/sunset strings.
+
+**Request 2 — future 6 months (proxied from last year):**
+```
+GET https://archive-api.open-meteo.com/v1/archive
+  ?latitude={lat}&longitude={lon}
+  &daily=sunrise,sunset
+  &timezone=auto
+  &start_date={tomorrow - 1 year}&end_date={today + 6 months - 1 year}
+```
+Dates from request 2 are shifted +1 year before display. Both requests run via `Promise.all`.
 
 ### Open-Meteo — geocoding (city search)
 ```
@@ -141,18 +157,24 @@ Display clearly:
 - Total daylight duration (h m format, e.g. "17h 23m")
 - Comparison to yesterday (+/- minutes, e.g. "+3 min vs yesterday")
 
-### 3. Full-Year Daylight Curve
-- Fetch all 365 days' sunrise/sunset from Open-Meteo archive in a single call
+### 3. 12-Month Daylight Curve
+- Shows 6 months past (real archive data) + 6 months forecast (proxied from prior year)
+- Two parallel archive requests; future dates shifted +1 year before display
 - Compute daylight duration per day (sunset − sunrise in minutes)
 - Render as smooth area chart (Recharts `AreaChart`) with:
-  - X-axis: month labels (Jan–Dec)
+  - X-axis: numeric month labels (1–12, no names)
   - Y-axis: hours of daylight
   - Tooltip: exact date + duration on hover
-  - Vertical `ReferenceLine` at today
+  - Vertical `ReferenceLine` at today (visually separates past from forecast)
   - Gradient fill (warm/bright at top, fades to transparent)
-- Shape should resemble a sine curve peaking at summer solstice
+- Shape resembles a sine curve peaking at summer solstice
 
-### 4. UI/UX Requirements
+### 4. Build Date Footer
+- `vite.config.ts` injects `__BUILD_DATE__` as a compile-time string constant via Vite's `define`
+- Declared in `vite-env.d.ts` as `declare const __BUILD_DATE__: string`
+- Footer displays `Built YYYY-MM-DD` using the build timestamp, not runtime
+
+### 5. UI/UX Requirements
 - Fully responsive (mobile-first, works on 320px+)
 - Dark/light mode toggle, persisted to localStorage
 - Smooth animations: fade-in on load, skeleton loaders while data fetches
