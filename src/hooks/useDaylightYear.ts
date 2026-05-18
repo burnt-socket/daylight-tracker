@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import axios from 'axios'
-import { getYear } from 'date-fns'
+import { format, getYear } from 'date-fns'
 import { calcDurationMinutes } from '@/utils/daylight'
 import type { Coordinates, DaylightDay } from '@/types'
 
@@ -23,7 +23,7 @@ async function fetchDaylightYear(coords: Coordinates): Promise<DaylightDay[]> {
       daily: ['sunrise', 'sunset'],
       timezone: 'auto',
       start_date: `${year}-01-01`,
-      end_date: `${year}-12-31`,
+      end_date: format(new Date(), 'yyyy-MM-dd'),
     },
   })
 
