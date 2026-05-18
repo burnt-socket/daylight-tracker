@@ -9,6 +9,7 @@ import {
 } from 'recharts'
 import { format, parseISO } from 'date-fns'
 import { minutesToHours } from '@/utils/daylight'
+import { useThemeStore } from '@/store/themeStore'
 import type { DaylightDay } from '@/types'
 
 interface Props {
@@ -16,25 +17,33 @@ interface Props {
 }
 
 export function DaylightChart({ data }: Props) {
+  const { theme } = useThemeStore()
+  const isDark = theme === 'dark'
   const today = format(new Date(), 'yyyy-MM-dd')
+
   const chartData = data.map((d) => ({
     date: d.date,
     hours: minutesToHours(d.durationMinutes),
   }))
 
+  const axisColor = isDark ? '#475569' : '#9ca3af'
+  const tooltipBg = isDark ? '#1e293b' : '#ffffff'
+  const tooltipBorder = isDark ? '#334155' : '#e5e7eb'
+  const tooltipText = isDark ? '#e2e8f0' : '#374151'
+
   return (
     <section
-      aria-label="Daylight throughout the year"
-      className="rounded-2xl bg-white/80 p-6 shadow-lg dark:bg-slate-900/80"
+      aria-label="Daylight hours throughout the year"
+      className="animate-fade-in rounded-2xl bg-white p-6 shadow-sm ring-1 ring-black/5 dark:bg-slate-900 dark:ring-white/5"
     >
-      <h2 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
+      <h2 className="mb-5 text-base font-semibold text-gray-900 dark:text-white">
         Daylight This Year
       </h2>
       <ResponsiveContainer width="100%" height={240}>
         <AreaChart data={chartData} margin={{ top: 4, right: 4, left: -16, bottom: 0 }}>
           <defs>
             <linearGradient id="daylightGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.8} />
+              <stop offset="5%" stopColor="#f59e0b" stopOpacity={isDark ? 0.45 : 0.7} />
               <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
             </linearGradient>
           </defs>
@@ -42,7 +51,7 @@ export function DaylightChart({ data }: Props) {
             dataKey="date"
             tickLine={false}
             axisLine={false}
-            tick={{ fontSize: 12 }}
+            tick={{ fontSize: 11, fill: axisColor }}
             interval={30}
             tickFormatter={(value: string) => {
               try {
@@ -55,10 +64,19 @@ export function DaylightChart({ data }: Props) {
           <YAxis
             tickLine={false}
             axisLine={false}
-            tick={{ fontSize: 12 }}
+            tick={{ fontSize: 11, fill: axisColor }}
             tickFormatter={(value: number) => `${value}h`}
           />
           <Tooltip
+            contentStyle={{
+              backgroundColor: tooltipBg,
+              border: `1px solid ${tooltipBorder}`,
+              borderRadius: '8px',
+              color: tooltipText,
+              fontSize: '12px',
+              boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
+            }}
+            itemStyle={{ color: tooltipText }}
             formatter={(value: number) => [`${value}h`, 'Daylight']}
             labelFormatter={(label: string) => {
               try {
@@ -68,7 +86,13 @@ export function DaylightChart({ data }: Props) {
               }
             }}
           />
-          <ReferenceLine x={today} stroke="#6366f1" strokeDasharray="4 2" strokeWidth={2} />
+          <ReferenceLine
+            x={today}
+            stroke="#6366f1"
+            strokeDasharray="4 2"
+            strokeWidth={2}
+            label={{ value: 'Today', position: 'insideTopRight', fontSize: 10, fill: '#6366f1' }}
+          />
           <Area
             type="monotone"
             dataKey="hours"
@@ -76,6 +100,7 @@ export function DaylightChart({ data }: Props) {
             fill="url(#daylightGrad)"
             strokeWidth={2}
             dot={false}
+            activeDot={{ r: 4, fill: '#f59e0b', strokeWidth: 0 }}
           />
         </AreaChart>
       </ResponsiveContainer>
