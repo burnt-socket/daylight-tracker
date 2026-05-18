@@ -1,0 +1,239 @@
+# Daylight Tracker
+
+## Project Overview
+Build a modern React web app that shows users their location's daylight information:
+current day's sunrise/sunset times, daylight duration, and a full-year daylight
+curve visualized as a sine-like chart. Responsive, polished UI.
+
+---
+
+## Tech Stack
+- React 19 + Vite
+- TypeScript (strict mode)
+- Tailwind CSS v4
+- Recharts (daylight curve chart)
+- React Query (data/state management)
+- Zustand (global state)
+- date-fns (date calculations)
+- Open-Meteo API (free, no key required)
+- Nominatim (reverse geocoding, no key required)
+- Vercel (deployment)
+
+---
+
+## Bootstrap / First-Time Setup
+
+```bash
+npm create vite@latest . -- --template react-ts
+npm install
+npm install -D tailwindcss @tailwindcss/vite
+npm install recharts @tanstack/react-query zustand date-fns
+npm install -D vitest @testing-library/react @testing-library/jest-dom jsdom
+npm install -D eslint prettier eslint-config-prettier @typescript-eslint/eslint-plugin
+```
+
+After scaffolding, configure:
+- `vite.config.ts` — add Tailwind plugin and Vitest settings
+- `tsconfig.json` — ensure `strict: true`, `noUncheckedIndexedAccess: true`
+- `eslint.config.js` — use `@typescript-eslint/recommended` + `prettier`
+- `.prettierrc` — `{ "semi": false, "singleQuote": true, "printWidth": 100 }`
+- `tailwind.config.ts` — extend palette with sunrise/navy tokens
+
+---
+
+## Development Commands
+
+```bash
+npm run dev          # Vite dev server (localhost:5173)
+npm run build        # TypeScript compile + Vite production build
+npm run preview      # Preview production build locally
+npm run lint         # ESLint (zero warnings required)
+npm run typecheck    # tsc --noEmit
+npm run test         # Vitest (watch mode)
+npm run test:ci      # Vitest (single run, for CI)
+npm run coverage     # Vitest coverage report
+```
+
+Run before every commit: `npm run lint && npm run typecheck && npm run test:ci`
+
+---
+
+## Project Structure
+
+```
+src/
+  components/
+    DaylightPanel/       # Today's daylight card
+    DaylightChart/       # Full-year area chart
+    LocationSearch/      # City search input + suggestions
+    ThemeToggle/         # Dark/light mode button
+    ui/                  # Reusable primitives (Skeleton, ErrorBoundary, etc.)
+  hooks/
+    useGeolocation.ts    # Browser geolocation hook
+    useDaylightToday.ts  # React Query hook for today's data
+    useDaylightYear.ts   # React Query hook for 365-day batch data
+  store/
+    locationStore.ts     # Zustand: current coordinates + city name
+    themeStore.ts        # Zustand: dark/light mode preference
+  utils/
+    daylight.ts          # Pure functions: duration calc, delta, formatting
+    geocoding.ts         # Nominatim fetch helpers
+  types/
+    index.ts             # Shared TypeScript interfaces
+  App.tsx
+  main.tsx
+```
+
+---
+
+## API Endpoints
+
+### Open-Meteo — today's sunrise/sunset
+```
+GET https://api.open-meteo.com/v1/forecast
+  ?latitude={lat}&longitude={lon}
+  &daily=sunrise,sunset
+  &timezone=auto
+  &forecast_days=2
+```
+Returns today + tomorrow; use index 0 for today, compare index -1 from yesterday's call (or fetch `past_days=1`).
+
+### Open-Meteo — full year (single batch call)
+```
+GET https://archive-api.open-meteo.com/v1/archive
+  ?latitude={lat}&longitude={lon}
+  &daily=sunrise,sunset
+  &timezone=auto
+  &start_date={YYYY-01-01}&end_date={YYYY-12-31}
+```
+Use the current year. Returns arrays of 365 sunrise/sunset strings.
+
+### Open-Meteo — geocoding (city search)
+```
+GET https://geocoding-api.open-meteo.com/v1/search
+  ?name={query}&count=5&language=en&format=json
+```
+
+### Nominatim — reverse geocoding (coords → city name)
+```
+GET https://nominatim.openstreetmap.org/reverse
+  ?lat={lat}&lon={lon}&format=json
+```
+Must send `User-Agent: daylight-tracker/1.0` header (set via `VITE_NOMINATIM_USER_AGENT`).
+
+---
+
+## App Features
+
+### 1. Geolocation
+- Request browser geolocation on load with graceful permission handling
+- Show loading skeleton while fetching
+- Fallback: manual city search using Open-Meteo geocoding API
+- Reverse geocode coordinates to city/country name via Nominatim
+- Store last known location in localStorage via Zustand persist middleware
+
+### 2. Today's Daylight Panel
+Display clearly:
+- Location name (city, country)
+- Current date
+- Sunrise time (local timezone)
+- Sunset time (local timezone)
+- Total daylight duration (h m format, e.g. "17h 23m")
+- Comparison to yesterday (+/- minutes, e.g. "+3 min vs yesterday")
+
+### 3. Full-Year Daylight Curve
+- Fetch all 365 days' sunrise/sunset from Open-Meteo archive in a single call
+- Compute daylight duration per day (sunset − sunrise in minutes)
+- Render as smooth area chart (Recharts `AreaChart`) with:
+  - X-axis: month labels (Jan–Dec)
+  - Y-axis: hours of daylight
+  - Tooltip: exact date + duration on hover
+  - Vertical `ReferenceLine` at today
+  - Gradient fill (warm/bright at top, fades to transparent)
+- Shape should resemble a sine curve peaking at summer solstice
+
+### 4. UI/UX Requirements
+- Fully responsive (mobile-first, works on 320px+)
+- Dark/light mode toggle, persisted to localStorage
+- Smooth animations: fade-in on load, skeleton loaders while data fetches
+- Light mode: warm sunrise oranges/yellows; dark mode: deep navy/indigo
+- No UI component library — build custom components with Tailwind only
+- Accessible: ARIA labels, keyboard navigation, WCAG AA color contrast
+
+---
+
+## State Management Patterns
+
+- **Zustand** — persisted global state only: `{ lat, lon, cityName }` and `{ theme }`
+- **React Query** — all async data fetching; cache today's data for 10 min, year data for 1 hour
+- Keep component state local unless it needs to survive navigation or be shared
+
+---
+
+## Testing Guidelines
+
+- Test all functions in `src/utils/` with Vitest unit tests (target >80% coverage)
+- Key things to test: daylight duration calculation, delta formatting, date edge cases (Dec 31, leap years)
+- Use `@testing-library/react` for component smoke tests on `DaylightPanel` and `DaylightChart`
+- Mock `fetch` in tests — never hit real APIs in the test suite
+- Test files live alongside source: `daylight.test.ts` next to `daylight.ts`
+
+---
+
+## Repository & CI/CD Setup
+
+1. Initialize Git repo, push to GitHub
+2. GitHub Actions workflows:
+   - `ci.yml`: on push/PR → lint, typecheck, test:ci
+   - `deploy-preview.yml`: on PR → deploy preview to Vercel, post URL as PR comment
+   - `deploy-prod.yml`: on merge to main → deploy to Vercel production
+3. `vercel.json`: set `buildCommand`, `outputDirectory: dist`, `framework: vite`
+4. Branch protection on `main`: require CI pass + 1 PR review before merge
+5. Conventional commit messages: `feat/fix/chore/ci/test/refactor`
+
+---
+
+## Automated Workflow Requirements
+
+Claude Code should:
+1. Create feature branches per major feature (e.g. `feat/geolocation`, `feat/chart`)
+2. Make atomic commits with conventional messages after each logical unit
+3. Run `npm run lint && npm run typecheck && npm run test:ci` before every commit — fix all errors first
+4. Open PRs automatically when a feature branch is ready
+5. PR description should summarize changes and link related issues
+
+---
+
+## Recommended Additional Features (implement after core)
+- **Share button**: `/?lat=60.17&lon=24.93` URL encoding
+- **PWA**: `manifest.json` + service worker for mobile installability
+- **Notifications**: optional browser notification at sunrise/sunset
+- **Multi-location compare**: pin up to 3 locations, overlay curves
+- **Equinox/solstice markers**: annotate chart with astronomical events
+- **Stats panel**: longest/shortest day, days until next solstice
+
+---
+
+## Quality Gates (must pass before merging)
+- Zero TypeScript errors (`tsc --noEmit` clean)
+- ESLint: zero warnings
+- Vitest coverage >80% on `src/utils/`
+- Lighthouse: Performance >90, Accessibility >95
+- Works offline after first load (PWA cache)
+
+---
+
+## Environment Variables
+
+Add to Vercel and `.env.example`:
+```
+VITE_APP_NAME=DaylightTracker
+VITE_NOMINATIM_USER_AGENT=daylight-tracker/1.0
+```
+
+---
+
+## Package Management
+- Always use `apt` or `apt-get` for installing packages
+- Prefer `apt` over other package managers unless the project explicitly requires otherwise
+- Use `snap` only as a last resort, if `apt` is not available
