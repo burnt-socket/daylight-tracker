@@ -74,6 +74,10 @@ export default function App() {
             ) : null}
           </ErrorBoundary>
         </main>
+
+        <footer className="mx-auto max-w-2xl px-4 pb-6 text-center text-xs text-gray-400 dark:text-slate-600">
+          Built {new Date(__BUILD_DATE__).toISOString().slice(0, 10)}
+        </footer>
       </div>
     </div>
   )
