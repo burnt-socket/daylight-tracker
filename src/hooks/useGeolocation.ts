@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useLocationStore } from '@/store/locationStore'
 import type { Coordinates } from '@/types'
 
 type GeolocationState =
@@ -9,6 +10,7 @@ type GeolocationState =
 
 export function useGeolocation(): GeolocationState {
   const [state, setState] = useState<GeolocationState>({ status: 'idle' })
+  const storedLocation = useLocationStore((s) => s.location)
 
   useEffect(() => {
     if (!navigator.geolocation) {
@@ -25,6 +27,11 @@ export function useGeolocation(): GeolocationState {
       (err) => setState({ status: 'error', error: err.message })
     )
   }, [])
+
+  // While the browser request is pending, surface last known coords so the UI isn't blank on revisit
+  if ((state.status === 'idle' || state.status === 'loading') && storedLocation) {
+    return { status: 'success', coords: { lat: storedLocation.lat, lon: storedLocation.lon } }
+  }
 
   return state
 }
