@@ -55,7 +55,7 @@ export function DaylightChart({ data }: Props) {
             interval={30}
             tickFormatter={(value: string) => {
               try {
-                return format(parseISO(value), 'MMM')
+                return format(parseISO(value), 'M')
               } catch {
                 return ''
               }
