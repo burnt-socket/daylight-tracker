@@ -1,7 +1,6 @@
 import axios from 'axios'
 import type { GeocodingResult, Location } from '@/types'
 
-const NOMINATIM_BASE = 'https://nominatim.openstreetmap.org'
 const GEOCODING_BASE = 'https://geocoding-api.open-meteo.com/v1'
 
 interface NominatimResponse {
@@ -24,10 +23,8 @@ interface OpenMeteoGeocodingResponse {
 }
 
 export async function reverseGeocode(lat: number, lon: number): Promise<Location> {
-  const userAgent = import.meta.env['VITE_NOMINATIM_USER_AGENT'] as string | undefined
-  const { data } = await axios.get<NominatimResponse>(`${NOMINATIM_BASE}/reverse`, {
-    params: { lat, lon, format: 'json' },
-    headers: { 'User-Agent': userAgent ?? 'daylight-tracker/1.0' },
+  const { data } = await axios.get<NominatimResponse>('/api/reverse-geocode', {
+    params: { lat, lon },
   })
   return {
     lat,
