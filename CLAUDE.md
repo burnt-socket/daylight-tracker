@@ -16,6 +16,7 @@ curve visualized as a sine-like chart. Responsive, polished UI.
 - Zustand (global state)
 - date-fns (date calculations)
 - axios (HTTP client)
+- vite-plugin-pwa + Workbox (PWA / offline support)
 - Open-Meteo API (free, no key required)
 - Nominatim (reverse geocoding, no key required)
 - Vercel (deployment)
@@ -31,10 +32,11 @@ npm install -D tailwindcss @tailwindcss/vite
 npm install recharts @tanstack/react-query zustand date-fns axios
 npm install -D vitest @testing-library/react @testing-library/jest-dom jsdom
 npm install -D eslint prettier eslint-config-prettier @typescript-eslint/eslint-plugin
+npm install -D vite-plugin-pwa
 ```
 
 After scaffolding, configure:
-- `vite.config.ts` — add Tailwind plugin, Vitest settings, and `define: { __BUILD_DATE__ }` for build stamping
+- `vite.config.ts` — add Tailwind plugin, VitePWA plugin, Vitest settings, and `define: { __BUILD_DATE__ }` for build stamping
 - `tsconfig.json` — ensure `strict: true`, `noUncheckedIndexedAccess: true`
 - `eslint.config.js` — use `@typescript-eslint/recommended` + `prettier`
 - `.prettierrc` — `{ "semi": false, "singleQuote": true, "printWidth": 100 }`
@@ -172,9 +174,22 @@ Display clearly:
 ### 4. Build Date Footer
 - `vite.config.ts` injects `__BUILD_DATE__` as a compile-time string constant via Vite's `define`
 - Declared in `vite-env.d.ts` as `declare const __BUILD_DATE__: string`
-- Footer displays `Built YYYY-MM-DD` using the build timestamp, not runtime
+- Footer displays `Built YYYY-MM-DD HH:MM UTC` using the build timestamp, not runtime
 
-### 5. UI/UX Requirements
+### 5. PWA / Offline Support
+- Implemented via `vite-plugin-pwa` (Workbox `generateSW` mode, `autoUpdate` register type)
+- `manifest.webmanifest` is auto-generated with app name, icons, theme color, `display: standalone`
+- Icons: `public/icon-192.png`, `public/icon-512.png`, maskable variants, `public/apple-touch-icon.png`, `public/icon.svg`
+- Service worker precaches all static assets (JS, CSS, HTML, images) for full offline load
+- Runtime caching strategies:
+  - Open-Meteo forecast API → NetworkFirst, 10 min TTL
+  - Open-Meteo archive API → StaleWhileRevalidate, 1 hr TTL
+  - Open-Meteo geocoding API → StaleWhileRevalidate, 24 hr TTL
+  - Nominatim reverse geocoding → StaleWhileRevalidate, 24 hr TTL
+- `index.html` includes `<meta name="theme-color">` and `<link rel="apple-touch-icon">`
+- Build requires Node.js 20+ (Workbox's terser minifier uses the global `crypto` API)
+
+### 6. UI/UX Requirements
 - Fully responsive (mobile-first, works on 320px+)
 - Dark/light mode toggle, persisted to localStorage
 - Smooth animations: fade-in on load, skeleton loaders while data fetches
@@ -228,7 +243,6 @@ Claude Code should:
 
 ## Recommended Additional Features (implement after core)
 - **Share button**: `/?lat=60.17&lon=24.93` URL encoding
-- **PWA**: `manifest.json` + service worker for mobile installability
 - **Notifications**: optional browser notification at sunrise/sunset
 - **Multi-location compare**: pin up to 3 locations, overlay curves
 - **Equinox/solstice markers**: annotate chart with astronomical events
