@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { SpeedInsights } from '@vercel/speed-insights/react'
 import { useLocationStore } from '@/store/locationStore'
 import { useThemeStore } from '@/store/themeStore'
 import { useGeolocation } from '@/hooks/useGeolocation'
@@ -79,6 +80,7 @@ export default function App() {
           Built {new Date(__BUILD_DATE__).toISOString().slice(0, 16).replace('T', ' ')} UTC
         </footer>
       </div>
+      <SpeedInsights />
     </div>
   )
 }
