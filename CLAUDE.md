@@ -273,3 +273,4 @@ VITE_NOMINATIM_USER_AGENT=daylight-tracker/1.0
 - Always use `apt` or `apt-get` for installing packages
 - Prefer `apt` over other package managers unless the project explicitly requires otherwise
 - Use `snap` only as a last resort, if `apt` is not available
+- If `apt` installation fails because a sudo password is required, stop and show the user the exact command(s) to run manually, then wait for confirmation before continuing
