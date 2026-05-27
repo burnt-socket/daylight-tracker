@@ -5,6 +5,7 @@ import {
   YAxis,
   Tooltip,
   ReferenceLine,
+  ReferenceDot,
   ResponsiveContainer,
 } from 'recharts'
 import { format, parseISO } from 'date-fns'
@@ -97,17 +98,21 @@ export function DaylightChart({ data }: Props) {
             }}
           />
           {visibleEvents.map((event) => {
+            const point = chartData.find((d) => d.date === event.date)
+            if (!point) return null
             const month = parseInt(event.date.split('-')[1]!)
-            const position = month <= 6 ? 'insideTopRight' : 'insideTopLeft'
             const color = event.type === 'solstice' ? '#f97316' : '#10b981'
+            const labelPosition = event.type === 'solstice' && month === 6 ? 'bottom' : 'top'
             return (
-              <ReferenceLine
+              <ReferenceDot
                 key={event.date}
                 x={event.date}
-                stroke={color}
-                strokeDasharray="3 3"
+                y={point.hours}
+                r={3}
+                fill={color}
+                stroke={isDark ? '#1e293b' : '#ffffff'}
                 strokeWidth={1.5}
-                label={{ value: event.label, position, fontSize: 9, fill: color }}
+                label={{ value: event.label, position: labelPosition, fontSize: 8, fill: color }}
               />
             )
           })}
