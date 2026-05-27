@@ -8,7 +8,7 @@ import {
   ResponsiveContainer,
 } from 'recharts'
 import { format, parseISO } from 'date-fns'
-import { minutesToHours } from '@/utils/daylight'
+import { minutesToHours, getSolsticesAndEquinoxes } from '@/utils/daylight'
 import { useThemeStore } from '@/store/themeStore'
 import type { DaylightDay } from '@/types'
 
@@ -20,6 +20,16 @@ export function DaylightChart({ data }: Props) {
   const { theme } = useThemeStore()
   const isDark = theme === 'dark'
   const today = format(new Date(), 'yyyy-MM-dd')
+
+  const currentYear = new Date().getFullYear()
+  const visibleEvents =
+    data.length > 0
+      ? [
+          ...getSolsticesAndEquinoxes(currentYear - 1),
+          ...getSolsticesAndEquinoxes(currentYear),
+          ...getSolsticesAndEquinoxes(currentYear + 1),
+        ].filter((e) => e.date >= data[0]!.date && e.date <= data[data.length - 1]!.date)
+      : []
 
   const chartData = data.map((d) => ({
     date: d.date,
@@ -86,6 +96,21 @@ export function DaylightChart({ data }: Props) {
               }
             }}
           />
+          {visibleEvents.map((event) => {
+            const month = parseInt(event.date.split('-')[1]!)
+            const position = month <= 6 ? 'insideTopRight' : 'insideTopLeft'
+            const color = event.type === 'solstice' ? '#f97316' : '#10b981'
+            return (
+              <ReferenceLine
+                key={event.date}
+                x={event.date}
+                stroke={color}
+                strokeDasharray="3 3"
+                strokeWidth={1.5}
+                label={{ value: event.label, position, fontSize: 9, fill: color }}
+              />
+            )
+          })}
           <ReferenceLine
             x={today}
             stroke="#6366f1"

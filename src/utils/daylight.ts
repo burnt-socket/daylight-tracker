@@ -1,5 +1,20 @@
 import { differenceInMinutes, parseISO } from 'date-fns'
 
+export interface AstronomicalEvent {
+  date: string
+  label: string
+  type: 'solstice' | 'equinox'
+}
+
+export function getSolsticesAndEquinoxes(year: number): AstronomicalEvent[] {
+  return [
+    { date: `${year}-03-20`, label: 'Mar Eq', type: 'equinox' },
+    { date: `${year}-06-21`, label: 'Jun Sol', type: 'solstice' },
+    { date: `${year}-09-22`, label: 'Sep Eq', type: 'equinox' },
+    { date: `${year}-12-21`, label: 'Dec Sol', type: 'solstice' },
+  ]
+}
+
 export function calcDurationMinutes(sunrise: string, sunset: string): number {
   return differenceInMinutes(parseISO(sunset), parseISO(sunrise))
 }

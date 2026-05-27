@@ -168,8 +168,10 @@ Display clearly:
   - Y-axis: hours of daylight
   - Tooltip: exact date + duration on hover
   - Vertical `ReferenceLine` at today (visually separates past from forecast)
+  - Vertical `ReferenceLine` markers for solstices (orange, Jun 21 + Dec 21) and equinoxes (green, Mar 20 + Sep 22), labelled and filtered to the visible date range only
   - Gradient fill (warm/bright at top, fades to transparent)
 - Shape resembles a sine curve peaking at summer solstice
+- `getSolsticesAndEquinoxes(year)` in `src/utils/daylight.ts` returns fixed approximate dates; chart queries years currentYear-1/currentYear/currentYear+1 and filters to the visible range
 
 ### 4. Build Date Footer
 - `vite.config.ts` injects `__BUILD_DATE__` as a compile-time string constant via Vite's `define`
@@ -245,7 +247,6 @@ Claude Code should:
 - **Share button**: `/?lat=60.17&lon=24.93` URL encoding
 - **Notifications**: optional browser notification at sunrise/sunset
 - **Multi-location compare**: pin up to 3 locations, overlay curves
-- **Equinox/solstice markers**: annotate chart with astronomical events
 - **Stats panel**: longest/shortest day, days until next solstice
 
 ---

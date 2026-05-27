@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest'
-import { calcDurationMinutes, formatDuration, formatDelta, minutesToHours } from './daylight'
+import {
+  calcDurationMinutes,
+  formatDuration,
+  formatDelta,
+  minutesToHours,
+  getSolsticesAndEquinoxes,
+} from './daylight'
 
 describe('calcDurationMinutes', () => {
   it('calculates duration for a normal summer day', () => {
@@ -78,5 +84,45 @@ describe('minutesToHours', () => {
 
   it('handles zero', () => {
     expect(minutesToHours(0)).toBe(0)
+  })
+})
+
+describe('getSolsticesAndEquinoxes', () => {
+  it('returns exactly 4 events per year', () => {
+    expect(getSolsticesAndEquinoxes(2024)).toHaveLength(4)
+  })
+
+  it('returns 2 solstices and 2 equinoxes', () => {
+    const events = getSolsticesAndEquinoxes(2024)
+    expect(events.filter((e) => e.type === 'solstice')).toHaveLength(2)
+    expect(events.filter((e) => e.type === 'equinox')).toHaveLength(2)
+  })
+
+  it('all dates belong to the requested year', () => {
+    const events = getSolsticesAndEquinoxes(2025)
+    events.forEach((e) => expect(e.date.startsWith('2025-')).toBe(true))
+  })
+
+  it('returns events in chronological order', () => {
+    const events = getSolsticesAndEquinoxes(2024)
+    const dates = events.map((e) => e.date)
+    expect(dates).toEqual([...dates].sort())
+  })
+
+  it('summer solstice is in June', () => {
+    const events = getSolsticesAndEquinoxes(2024)
+    const junSol = events.find((e) => e.type === 'solstice' && e.date.includes('-06-'))
+    expect(junSol).toBeDefined()
+  })
+
+  it('winter solstice is in December', () => {
+    const events = getSolsticesAndEquinoxes(2024)
+    const decSol = events.find((e) => e.type === 'solstice' && e.date.includes('-12-'))
+    expect(decSol).toBeDefined()
+  })
+
+  it('each event has a non-empty label', () => {
+    const events = getSolsticesAndEquinoxes(2024)
+    events.forEach((e) => expect(e.label.length).toBeGreaterThan(0))
   })
 })
